@@ -22,3 +22,6 @@ out/
 # Misc
 .DS_Store
 *.log
+
+**/Claude.md
+**/agents.md
