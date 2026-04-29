@@ -1,0 +1,47 @@
+services:
+  # ── Backend API ────────────────────────────────────────────────────────────
+  - type: web
+    name: tripplanner-api
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tripplanner-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false          # enter your Groq API key in the Render dashboard
+      - key: FRONTEND_URL
+        sync: false          # enter: https://tripplanner-frontend.onrender.com
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  - type: web
+    name: tripplanner-frontend
+    env: node
+    rootDir: frontend
+    buildCommand: >
+      npm ci &&
+      npm run build &&
+      cp -r public .next/standalone/public &&
+      cp -r .next/static .next/standalone/.next/static
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_API_URL
+        sync: false          # enter: https://tripplanner-api.onrender.com
+
+# ── PostgreSQL database ────────────────────────────────────────────────────
+databases:
+  - name: tripplanner-db
+    databaseName: tripplanner
+    user: tripplanner
+    plan: free
