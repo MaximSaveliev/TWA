@@ -37,7 +37,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _client = Groq(api_key=settings.groq_api_key)
-_MODEL = "llama-3.3-70b-versatile"
+_MODEL = "openai/gpt-oss-120b"
 
 _VALID_CATEGORIES = {
     "accommodation",
