@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, FileText, MapPin, Pencil, Plus, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import TripForm, { TripFormData } from "@/components/trips/TripForm";
 import DestinationForm, { DestFormData } from "@/components/destinations/DestinationForm";
@@ -34,6 +34,8 @@ export default function TripDataPage() {
   const [editDestLoading, setEditDestLoading] = useState(false);
   const [savedDestIds, setSavedDestIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteDestId, setDeleteDestId] = useState<string | null>(null);
   const { expanded, toggle, ensureExpanded } = useDayExpansion();
 
   const fetchTrip = useCallback(async () => {
@@ -66,12 +68,13 @@ export default function TripDataPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this trip?")) return;
     try {
       await api.delete(`/api/trips/${id}`);
       router.push("/dashboard/trips");
     } catch {
       setError("Failed to delete trip.");
+    } finally {
+      setDeleteOpen(false);
     }
   };
 
@@ -133,13 +136,15 @@ export default function TripDataPage() {
     }
   };
 
-  const handleDeleteDest = async (destId: string) => {
-    if (!confirm("Remove stop?")) return;
+  const handleDeleteDest = async () => {
+    if (!deleteDestId) return;
     try {
-      await api.delete(`/api/trips/${id}/destinations/${destId}`);
+      await api.delete(`/api/trips/${id}/destinations/${deleteDestId}`);
       fetchTrip();
     } catch {
       setError("Failed to delete stop.");
+    } finally {
+      setDeleteDestId(null);
     }
   };
 
@@ -244,7 +249,7 @@ export default function TripDataPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() => setDeleteOpen(true)}
                 className="gap-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 ml-auto"
               >
                 <Trash2 size={12} /> Delete
@@ -270,7 +275,7 @@ export default function TripDataPage() {
               expandedDays={expanded}
               onToggleDay={toggle}
               onEdit={setEditDest}
-              onDelete={handleDeleteDest}
+              onDelete={(destId) => setDeleteDestId(destId)}
               onAddToDay={openAddDest}
               onSave={handleSaveDest}
               savedIds={savedDestIds}
@@ -284,6 +289,36 @@ export default function TripDataPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete trip?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-gray-900 dark:text-gray-100">{trip.title}</span> and all its stops will be permanently deleted. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteDestId} onOpenChange={(open) => { if (!open) setDeleteDestId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove stop?</DialogTitle>
+            <DialogDescription>
+              This stop will be permanently removed from the itinerary.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteDestId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteDest}>Remove</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setError(""); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
